@@ -473,6 +473,7 @@ body {
    ========================================================================== */
 .diff-row {
   position: relative;
+  cursor: pointer;
 }
 
 .tooltip {
@@ -491,7 +492,6 @@ body {
   line-height: 1.5;
   white-space: nowrap;
   z-index: 100;
-  pointer-events: none;
   box-shadow: 0 4px 12px rgba(0,0,0,0.4);
 }
 
@@ -505,7 +505,7 @@ body {
   border-top-color: #1e293b;
 }
 
-.diff-row:hover .tooltip {
+.diff-row.tooltip-active .tooltip {
   display: block;
 }
 
@@ -690,7 +690,7 @@ body {
         <button class="toggle-btn" data-status="unchanged">=</button>
       </div>
     </div>
-    <input type="text" class="search-input" id="searchInput" placeholder="Search band, combo name...">
+    <input type="text" class="search-input" id="searchInput" placeholder="Search combo name, or band set: n78a+3c+1a">
     <span class="result-count" id="resultCount"></span>
   </div>
 
@@ -1099,6 +1099,34 @@ const ComboRenderer = (() => {
   }
 
   /**
+   * Return the number of component carriers for a band class letter.
+   * LTE: A=1, B=2, C=2, D=3, E=4, F=5, I=8
+   * NR FR1: A=1, B=2, C=2, D=3, E=4, G=3, H=4, I=5, J=6, K=7, L=8, M=3, N=4, O=5
+   * Combined superset used here (most letters agree; NR adds G-O).
+   */
+  function carrierCount(bandStr) {
+    if (!bandStr) return 1;
+    const m = bandStr.match(/\d+([A-Z])/i);
+    if (!m) return 1;
+    const cls = m[1].toUpperCase();
+    const ccMap = {
+      A: 1, B: 2, C: 2, D: 3, E: 4, F: 5,
+      G: 3, H: 4, I: 5, J: 6, K: 7, L: 8, M: 3, N: 4, O: 5,
+    };
+    return ccMap[cls] || 1;
+  }
+
+  /**
+   * Expand a single MIMO value into multiple entries based on band class.
+   * E.g. band "3C" with mimo "2" → ["2", "2"] (2 CCs, MIMO 2 per CC).
+   */
+  function expandMimo(band, mimoVal) {
+    const cc = carrierCount(band.band);
+    const val = mimoVal || '-';
+    return Array(cc).fill(val);
+  }
+
+  /**
    * Band color mapping. Returns a CSS color for a given band number.
    * Falls back to a hash-based color for unknown bands.
    */
@@ -1176,9 +1204,9 @@ const ComboRenderer = (() => {
           const bwStr = combo.nrDL.map(b => b.bw || '-').join('+');
           track('endc-dl-bw', bwStr.length);
         }
-        // MIMO
-        const lteMimos = combo.lteDL.map(b => b.mimo || '-');
-        const nrMimos = combo.nrDL.map(b => b.mimo || '-');
+        // MIMO (expand multi-CC bands to multiple entries)
+        const lteMimos = combo.lteDL.flatMap(b => expandMimo(b, b.mimo || '-'));
+        const nrMimos = combo.nrDL.flatMap(b => expandMimo(b, b.mimo || '-'));
         const hasLte = lteMimos.some(m => m && m !== '-');
         const hasNr = nrMimos.some(m => m && m !== '-');
         if (hasLte || hasNr) {
@@ -1213,8 +1241,8 @@ const ComboRenderer = (() => {
         // BWs
         const bwStr = combo.nrDL.map(b => b.bw || '-').join('+');
         track('nrca-dl-bw', bwStr.length);
-        // MIMO
-        const dlMimos = combo.nrDL.map(b => b.mimo || '-');
+        // MIMO (expand multi-CC bands)
+        const dlMimos = combo.nrDL.flatMap(b => expandMimo(b, b.mimo || '-'));
         if (dlMimos.some(m => m && m !== '-')) {
           track('nrca-dl-mimo', dlMimos.join('+').length);
         }
@@ -1287,8 +1315,8 @@ const ComboRenderer = (() => {
         dlSegs.push(seg('endc-dl-nr', combo.nrDL.map(b => bandName(b, true)).join(plus)));
         dlSegs.push(seg('endc-dl-bw', combo.nrDL.map(b => esc(b.bw || '-')).join('+')));
       }
-      const lteMimos = combo.lteDL.map(b => b.mimo || '-');
-      const nrMimos = combo.nrDL.map(b => b.mimo || '-');
+      const lteMimos = combo.lteDL.flatMap(b => expandMimo(b, b.mimo || '-'));
+      const nrMimos = combo.nrDL.flatMap(b => expandMimo(b, b.mimo || '-'));
       const hasLteMimo = lteMimos.some(m => m && m !== '-');
       const hasNrMimo = nrMimos.some(m => m && m !== '-');
       if (hasLteMimo || hasNrMimo) {
@@ -1321,7 +1349,7 @@ const ComboRenderer = (() => {
       if (bws.some(b => b && b !== '-')) {
         dlSegs.push(seg('nrca-dl-bw', bws.map(b => esc(b)).join('+')));
       }
-      const dlMimos = combo.nrDL.map(b => b.mimo || '-');
+      const dlMimos = combo.nrDL.flatMap(b => expandMimo(b, b.mimo || '-'));
       if (dlMimos.some(m => m && m !== '-')) {
         dlSegs.push(seg('nrca-dl-mimo', dlMimos.join('+')));
       }
@@ -1393,8 +1421,16 @@ const ComboRenderer = (() => {
           hl(nrDLBwFI[i], b.bw || '-')
         ).join('+')));
       }
-      const lteMimos = combo.lteDL.map((b, i) => hl(mimoLTEIdx[i], b.mimo || '-'));
-      const nrMimos = combo.nrDL.map((b, i) => hl(mimoNRIdx[i], b.mimo || '-'));
+      const lteMimos = combo.lteDL.flatMap((b, i) => {
+        const cc = carrierCount(b.band);
+        const val = b.mimo || '-';
+        return Array(cc).fill(hl(mimoLTEIdx[i], val));
+      });
+      const nrMimos = combo.nrDL.flatMap((b, i) => {
+        const cc = carrierCount(b.band);
+        const val = b.mimo || '-';
+        return Array(cc).fill(hl(mimoNRIdx[i], val));
+      });
       const hasLteMimo = combo.lteDL.some(b => b.mimo && b.mimo !== '-');
       const hasNrMimo = combo.nrDL.some(b => b.mimo && b.mimo !== '-');
       if (hasLteMimo || hasNrMimo) {
@@ -1437,7 +1473,11 @@ const ComboRenderer = (() => {
       if (combo.nrDL.some(b => b.bw && b.bw !== '-')) {
         dlSegs.push(seg('nrca-dl-bw', bws.join('+')));
       }
-      const dlMimos = combo.nrDL.map((b, i) => hl(mimoIdx[i], b.mimo || '-'));
+      const dlMimos = combo.nrDL.flatMap((b, i) => {
+        const cc = carrierCount(b.band);
+        const val = b.mimo || '-';
+        return Array(cc).fill(hl(mimoIdx[i], val));
+      });
       if (combo.nrDL.some(b => b.mimo && b.mimo !== '-')) {
         dlSegs.push(seg('nrca-dl-mimo', dlMimos.join('+')));
       }
@@ -1750,16 +1790,26 @@ const AppController = (() => {
 
       diff.added.forEach(c => { typeEntries.push({
         diffStatus: 'added', combo: c, searchText: buildSearchText(c),
+        bandSet: buildBandSet(c),
       }); allCombos.push(c); });
       diff.removed.forEach(c => { typeEntries.push({
         diffStatus: 'removed', combo: c, searchText: buildSearchText(c),
+        bandSet: buildBandSet(c),
       }); allCombos.push(c); });
-      diff.modified.forEach(m => { typeEntries.push({
-        diffStatus: 'modified', old: m.old, new: m.new, changes: m.changes,
-        searchText: buildSearchText(m.old) + ' ' + buildSearchText(m.new),
-      }); allCombos.push(m.old); allCombos.push(m.new); });
+      diff.modified.forEach(m => {
+        // Union of old and new band sets for matching
+        const bs = buildBandSet(m.old);
+        for (const b of buildBandSet(m.new)) bs.add(b);
+        typeEntries.push({
+          diffStatus: 'modified', old: m.old, new: m.new, changes: m.changes,
+          searchText: buildSearchText(m.old) + ' ' + buildSearchText(m.new),
+          bandSet: bs,
+        });
+        allCombos.push(m.old); allCombos.push(m.new);
+      });
       diff.unchanged.forEach(c => { typeEntries.push({
         diffStatus: 'unchanged', combo: c, searchText: buildSearchText(c),
+        bandSet: buildBandSet(c),
       }); allCombos.push(c); });
 
       // Sort all entries by combo name (alphabetical) for git-diff interleaving
@@ -1787,9 +1837,38 @@ const AppController = (() => {
     return parts.join(' ').toLowerCase();
   }
 
+  /**
+   * Build a set of normalised DL band identifiers for band-set search.
+   * EN-DC: LTE bands as-is (e.g. "1a", "3c"), NR bands prefixed with "n" (e.g. "n78a").
+   * NR-CA: all bands prefixed with "n".
+   * Returns a Set of lowercase strings.
+   */
+  function buildBandSet(combo) {
+    const bands = new Set();
+    if (combo._type === 'endc') {
+      if (combo.lteDL) combo.lteDL.forEach(b => { if (b.band) bands.add(b.band.toLowerCase()); });
+      if (combo.nrDL) combo.nrDL.forEach(b => { if (b.band) bands.add('n' + b.band.toLowerCase()); });
+    } else if (combo._type === 'nrca') {
+      if (combo.nrDL) combo.nrDL.forEach(b => {
+        if (b.band) {
+          const lb = b.band.toLowerCase();
+          bands.add(lb.startsWith('n') ? lb : 'n' + lb);
+        }
+      });
+    }
+    return bands;
+  }
+
+  /**
+   * Check if a query like "n78c+n28a+3c+1a" matches a combo's DL bands (AND logic).
+   * The '+' separates required bands. Order and case don't matter.
+   */
+  function matchBandSetQuery(bandSet, queryBands) {
+    return queryBands.every(qb => bandSet.has(qb));
+  }
+
   function renderSummary() {
     let totalAdded = 0, totalRemoved = 0, totalModified = 0, totalUnchanged = 0;
-    const allBandStats = new Map();
 
     for (const type of ['endc', 'nrca']) {
       const diff = state.diffResults[type];
@@ -1798,13 +1877,6 @@ const AppController = (() => {
       totalRemoved += diff.removed.length;
       totalModified += diff.modified.length;
       totalUnchanged += diff.unchanged.length;
-
-      const bs = ComboDiffer.bandStats(diff);
-      for (const [band, counts] of bs) {
-        if (!allBandStats.has(band)) allBandStats.set(band, { added: 0, removed: 0 });
-        allBandStats.get(band).added += counts.added;
-        allBandStats.get(band).removed += counts.removed;
-      }
     }
 
     const total = totalAdded + totalRemoved + totalModified + totalUnchanged;
@@ -1816,26 +1888,6 @@ const AppController = (() => {
     html += `<span class="stat-removed">&minus;${totalRemoved} removed</span>`;
     html += `<span class="stat-modified">~${totalModified} modified</span>`;
     html += `<span class="stat-unchanged">${totalUnchanged} unchanged</span>`;
-
-    // Band changes
-    const sortedBands = [...allBandStats.entries()]
-      .filter(([, c]) => c.added > 0 || c.removed > 0)
-      .sort((a, b) => (b[1].added + b[1].removed) - (a[1].added + a[1].removed))
-      .slice(0, 10);
-
-    if (sortedBands.length) {
-      html += `<span class="band-changes">`;
-      html += `<span class="band-changes-label">Bands:</span>`;
-      sortedBands.forEach(([band, counts]) => {
-        const color = ComboRenderer.bandColor(band);
-        let label = `<span style="color:${color}">B${band}</span>`;
-        const details = [];
-        if (counts.added) details.push(`<span class="stat-added">+${counts.added}</span>`);
-        if (counts.removed) details.push(`<span class="stat-removed">-${counts.removed}</span>`);
-        html += `${label}${details.join('/')} `;
-      });
-      html += `</span>`;
-    }
 
     els.summaryBar.innerHTML = html;
   }
@@ -1880,6 +1932,21 @@ const AppController = (() => {
         applyFilters();
       }, 150);
     });
+
+    // Tooltip: click to toggle, dismiss on click elsewhere
+    els.diffBody.addEventListener('click', (e) => {
+      const row = e.target.closest('.diff-row');
+      if (!row) return;
+      const wasActive = row.classList.contains('tooltip-active');
+      // Close any open tooltip first
+      els.diffBody.querySelectorAll('.diff-row.tooltip-active').forEach(r => r.classList.remove('tooltip-active'));
+      if (!wasActive) row.classList.add('tooltip-active');
+    });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.diff-row')) {
+        els.diffBody.querySelectorAll('.diff-row.tooltip-active').forEach(r => r.classList.remove('tooltip-active'));
+      }
+    });
   }
 
   /**
@@ -1905,7 +1972,13 @@ const AppController = (() => {
 
     // Apply search filter
     if (state.searchQuery) {
-      entries = entries.filter(e => e.searchText.includes(state.searchQuery));
+      if (state.searchQuery.includes('+')) {
+        // Band-set search: "n78c+n28a+3c+1a" means combo must contain ALL listed DL bands
+        const queryBands = state.searchQuery.split('+').map(s => s.trim()).filter(Boolean);
+        entries = entries.filter(e => e.bandSet && matchBandSetQuery(e.bandSet, queryBands));
+      } else {
+        entries = entries.filter(e => e.searchText.includes(state.searchQuery));
+      }
     }
 
     // When view=changes and no explicit status/search filter narrowing,
