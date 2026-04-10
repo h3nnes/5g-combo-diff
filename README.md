@@ -2,8 +2,9 @@
 
 A single-file web tool for comparing carrier aggregation combo lists between firmware versions. Drop two CSV exports and instantly see what changed.
 
-<img width="2638" height="1446" alt="image" src="https://github.com/user-attachments/assets/a70589ba-9c39-454b-a410-f01c31e5ce7c" />
+Live here: https://h3nnes.github.io/5g-combo-diff/
 
+<img width="2638" height="1446" alt="image" src="https://github.com/user-attachments/assets/a70589ba-9c39-454b-a410-f01c31e5ce7c" />
 
 ## Features
 
