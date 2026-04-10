@@ -1,0 +1,2072 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5G Combo Diff — Firmware Comparison</title>
+<style>
+/* ==========================================================================
+   CSS VARIABLES — Edit these to change the look and feel globally
+   ========================================================================== */
+:root {
+  /* Base palette */
+  --bg-primary: #0a0e17;
+  --bg-secondary: #111827;
+  --bg-tertiary: #1a2236;
+  --bg-table: #0d1117;
+  --bg-table-header: #161b22;
+  --bg-hover: #1e2a42;
+  --border-color: #30363d;
+  --border-subtle: #21262d;
+
+  /* Text */
+  --text-primary: #c9d1d9;
+  --text-secondary: #8b949e;
+  --text-muted: #64748b;
+  --text-accent: #38bdf8;
+
+  /* Diff colors */
+  --added-bg: rgba(34, 197, 94, 0.1);
+  --added-bg-hl: rgba(34, 197, 94, 0.3);
+  --added-text: #4ade80;
+  --added-border: #22c55e;
+
+  --removed-bg: rgba(239, 68, 68, 0.08);
+  --removed-bg-hl: rgba(239, 68, 68, 0.3);
+  --removed-text: #f87171;
+  --removed-border: #ef4444;
+
+  --modified-text: #fbbf24;
+
+  /* Band colors — extend this map to support more bands */
+  --band-1: #6366f1;
+  --band-2: #818cf8;
+  --band-3: #a78bfa;
+  --band-4: #c084fc;
+  --band-5: #e879f9;
+  --band-7: #f472b6;
+  --band-8: #fb7185;
+  --band-11: #fda4af;
+  --band-12: #f97316;
+  --band-13: #fb923c;
+  --band-14: #fbbf24;
+  --band-17: #facc15;
+  --band-18: #a3e635;
+  --band-19: #84cc16;
+  --band-20: #4ade80;
+  --band-21: #34d399;
+  --band-25: #2dd4bf;
+  --band-26: #22d3ee;
+  --band-28: #14b8a6;
+  --band-29: #06b6d4;
+  --band-30: #0ea5e9;
+  --band-32: #38bdf8;
+  --band-38: #60a5fa;
+  --band-39: #818cf8;
+  --band-40: #a78bfa;
+  --band-41: #22d3ee;
+  --band-42: #e879f9;
+  --band-46: #f472b6;
+  --band-48: #fb7185;
+  --band-66: #38bdf8;
+  --band-71: #60a5fa;
+  --band-77: #0ea5e9;
+  --band-78: #0284c7;
+  --band-79: #0369a1;
+  --band-257: #7c3aed;
+  --band-258: #9333ea;
+  --band-260: #a855f7;
+  --band-261: #c084fc;
+
+  /* UI */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --transition-fast: 150ms ease;
+
+  /* Fonts */
+  --font-ui: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+}
+
+/* ==========================================================================
+   RESET & BASE
+   ========================================================================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-ui);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* ==========================================================================
+   LAYOUT
+   ========================================================================== */
+.app-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px 16px 60px;
+}
+
+/* ==========================================================================
+   HEADER
+   ========================================================================== */
+.app-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.app-header h1 {
+  font-family: var(--font-mono);
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.app-header h1 span { color: var(--text-accent); }
+
+.app-header .subtitle {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: 2px;
+}
+
+/* ==========================================================================
+   DROP ZONE
+   ========================================================================== */
+.drop-zone-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.drop-zone {
+  position: relative;
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 250ms ease;
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.drop-zone:hover,
+.drop-zone.drag-over {
+  border-color: var(--text-accent);
+  background: var(--bg-tertiary);
+}
+
+.drop-zone.has-file {
+  border-style: solid;
+  border-color: var(--added-border);
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.drop-zone-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 2px;
+}
+
+.drop-zone-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.drop-zone-file {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--added-text);
+  margin-top: 4px;
+}
+
+.drop-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* ==========================================================================
+   COMPACT SUMMARY BAR
+   ========================================================================== */
+.summary-bar {
+  display: none;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  margin-bottom: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  flex-wrap: wrap;
+}
+
+.summary-bar.visible { display: flex; }
+
+.summary-bar .sep { color: var(--border-color); }
+.summary-bar .stat-total { color: var(--text-secondary); }
+.summary-bar .stat-added { color: var(--added-text); }
+.summary-bar .stat-removed { color: var(--removed-text); }
+.summary-bar .stat-modified { color: var(--modified-text); }
+.summary-bar .stat-unchanged { color: var(--text-muted); }
+.summary-bar .band-changes { margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.summary-bar .band-changes-label { color: var(--text-muted); font-size: 0.7rem; font-family: var(--font-ui); }
+
+/* ==========================================================================
+   FILTER BAR
+   ========================================================================== */
+.filter-bar {
+  display: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.filter-bar.visible { display: flex; }
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.toggle-group {
+  display: inline-flex;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.toggle-btn {
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-family: var(--font-ui);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.toggle-btn:not(:last-child) {
+  border-right: 1px solid var(--border-color);
+}
+
+.toggle-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.toggle-btn.active {
+  background: var(--text-accent);
+  color: var(--bg-primary);
+  font-weight: 600;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 140px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.search-input:focus { border-color: var(--text-accent); }
+.search-input::placeholder { color: var(--text-muted); }
+
+.result-count {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   DIFF TABLE
+   ========================================================================== */
+.diff-section {
+  display: none;
+}
+
+.diff-section.visible { display: block; }
+
+.diff-table {
+  background: var(--bg-table);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/* Table column header */
+.diff-table-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.diff-table-header .col-header {
+  padding: 8px 12px;
+  background: var(--bg-table-header);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.diff-table-header .col-header:first-child {
+  border-right: 1px solid var(--border-color);
+}
+
+/* Section header (EN-DC / NR-CA) */
+.diff-type-header {
+  padding: 6px 12px;
+  background: var(--bg-tertiary);
+  color: var(--text-accent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.diff-type-header .change-count {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+/* Diff rows */
+.diff-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.diff-row:last-child { border-bottom: none; }
+
+.diff-cell {
+  padding: 5px 12px;
+  line-height: 1.6;
+  min-height: 28px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.diff-cell:first-child {
+  border-right: 1px solid var(--border-color);
+}
+
+/* Row types */
+.diff-row.row-added .diff-cell.cell-new {
+  background: var(--added-bg);
+  color: var(--added-text);
+}
+
+.diff-row.row-removed .diff-cell.cell-old {
+  background: var(--removed-bg);
+  color: var(--removed-text);
+}
+
+.diff-row.row-modified .diff-cell.cell-old {
+  background: var(--removed-bg);
+}
+
+.diff-row.row-modified .diff-cell.cell-new {
+  background: var(--added-bg);
+}
+
+.diff-row.row-unchanged .diff-cell {
+  opacity: 0.35;
+}
+
+.diff-row.row-unchanged:hover .diff-cell {
+  opacity: 0.6;
+}
+
+/* Empty cell (opposite side of added/removed) */
+.diff-cell.cell-empty {
+  background: var(--bg-table);
+}
+
+/* Inline diff highlights */
+.hl-old {
+  background: var(--removed-bg-hl);
+  color: var(--removed-text);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+.hl-new {
+  background: var(--added-bg-hl);
+  color: var(--added-text);
+  padding: 1px 4px;
+  border-radius: 2px;
+}
+
+/* Labels inside rows */
+.row-label {
+  color: var(--text-muted);
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.band-sep { color: var(--text-muted); opacity: 0.4; }
+.mimo-sep { color: var(--text-muted); opacity: 0.4; }
+
+/* Fixed-width segments for column alignment */
+.seg {
+  display: inline-block;
+  white-space: nowrap;
+}
+.seg-pipe {
+  display: inline-block;
+  color: var(--text-muted);
+  opacity: 0.4;
+  text-align: center;
+  width: 2.4ch;
+}
+
+/* Row hover on non-empty cells */
+.diff-row:hover .diff-cell:not(.cell-empty) {
+  filter: brightness(1.1);
+}
+
+/* ==========================================================================
+   TOOLTIP (BCS / Modulation on hover)
+   ========================================================================== */
+.diff-row {
+  position: relative;
+}
+
+.tooltip {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #1e293b;
+}
+
+.diff-row:hover .tooltip {
+  display: block;
+}
+
+.tooltip .tt-label {
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.tooltip .tt-val {
+  color: var(--text-secondary);
+}
+
+.tooltip .tt-hl {
+  color: var(--modified-text);
+}
+
+/* ==========================================================================
+   FOLD SEPARATOR (git-diff context gap)
+   ========================================================================== */
+.diff-fold {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-tertiary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.diff-fold:hover {
+  background: var(--bg-hover);
+}
+
+.diff-fold-cell {
+  padding: 3px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.diff-fold-cell:first-child {
+  border-right: 1px solid var(--border-color);
+}
+
+/* ==========================================================================
+   PAGINATION
+   ========================================================================== */
+.diff-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-table-header);
+}
+
+.diff-pagination button {
+  padding: 4px 12px;
+  font-size: 0.78rem;
+  font-family: var(--font-ui);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.diff-pagination button:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--text-accent);
+}
+
+.diff-pagination button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.diff-pagination .page-info {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  min-width: 100px;
+  text-align: center;
+}
+
+/* ==========================================================================
+   EMPTY / LOADING STATES
+   ========================================================================== */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+}
+
+.empty-state .icon {
+  font-size: 2.5rem;
+  margin-bottom: 10px;
+  opacity: 0.4;
+}
+
+.empty-state p {
+  font-size: 0.85rem;
+}
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+@media (max-width: 768px) {
+  .drop-zone-container { grid-template-columns: 1fr; }
+  .filter-bar { flex-direction: column; align-items: stretch; }
+  .filter-group { justify-content: center; }
+  .result-count { margin-left: 0; text-align: center; }
+  .summary-bar .band-changes { margin-left: 0; }
+}
+
+/* ==========================================================================
+   SCROLLBAR
+   ========================================================================== */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="app-container">
+  <!-- HEADER -->
+  <header class="app-header">
+    <h1><span>5G</span> Combo Diff</h1>
+    <p class="subtitle">Compare EN-DC &amp; NR-CA carrier aggregation combos across firmware versions</p>
+  </header>
+
+  <!-- DROP ZONES -->
+  <div class="drop-zone-container">
+    <div class="drop-zone" id="dropOld" data-target="old">
+      <input type="file" accept=".csv" multiple>
+      <div class="drop-zone-label">Old Firmware</div>
+      <div class="drop-zone-hint">Drop EN-DC and/or NR-CA CSV files here, or click to browse</div>
+      <div class="drop-zone-file" id="dropOldFiles"></div>
+    </div>
+    <div class="drop-zone" id="dropNew" data-target="new">
+      <input type="file" accept=".csv" multiple>
+      <div class="drop-zone-label">New Firmware</div>
+      <div class="drop-zone-hint">Drop EN-DC and/or NR-CA CSV files here, or click to browse</div>
+      <div class="drop-zone-file" id="dropNewFiles"></div>
+    </div>
+  </div>
+
+  <!-- COMPACT SUMMARY BAR -->
+  <div class="summary-bar" id="summaryBar"></div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar" id="filterBar">
+    <div class="filter-group">
+      <span class="filter-label">View:</span>
+      <div class="toggle-group" id="viewToggle">
+        <button class="toggle-btn active" data-view="changes">Changes</button>
+        <button class="toggle-btn" data-view="all">All</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Type:</span>
+      <div class="toggle-group" id="typeToggle">
+        <button class="toggle-btn active" data-type="all">All</button>
+        <button class="toggle-btn" data-type="endc">EN-DC</button>
+        <button class="toggle-btn" data-type="nrca">NR-CA</button>
+      </div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">Status:</span>
+      <div class="toggle-group" id="statusToggle">
+        <button class="toggle-btn active" data-status="all">All</button>
+        <button class="toggle-btn" data-status="added">+</button>
+        <button class="toggle-btn" data-status="removed">&minus;</button>
+        <button class="toggle-btn" data-status="modified">~</button>
+        <button class="toggle-btn" data-status="unchanged">=</button>
+      </div>
+    </div>
+    <input type="text" class="search-input" id="searchInput" placeholder="Search band, combo name...">
+    <span class="result-count" id="resultCount"></span>
+  </div>
+
+  <!-- DIFF TABLE -->
+  <div class="diff-section" id="diffSection">
+    <div class="diff-table" id="diffTable">
+      <div class="diff-table-header">
+        <div class="col-header" id="colHeaderOld">OLD FIRMWARE</div>
+        <div class="col-header" id="colHeaderNew">NEW FIRMWARE</div>
+      </div>
+      <div id="diffBody"></div>
+      <div class="diff-pagination" id="pagination">
+        <button id="prevPage">&#8592; Prev</button>
+        <span class="page-info" id="pageInfo">Page 1 / 1</span>
+        <button id="nextPage">Next &#8594;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EMPTY STATE -->
+  <div class="empty-state" id="emptyState">
+    <div class="icon">&#9636;</div>
+    <p>Drop old and new firmware CSV files above to compare combos.</p>
+    <p style="margin-top:4px; font-size:0.75rem;">Supports EN-DC and NR-CA combo files (semicolon-separated).</p>
+  </div>
+</div>
+
+<script>
+/* ==========================================================================
+   COMBO PARSER — Parses CSV files into normalized combo objects.
+   ==========================================================================
+   EXTENDING: To support a new CSV format, add a detection condition in
+   detectType() and a new parse function following the pattern of
+   parseEndcRow() / parseNrcaRow().
+   ========================================================================== */
+const ComboParser = (() => {
+
+  /**
+   * Detect whether a CSV is EN-DC or NR-CA based on headers.
+   * @param {string[]} headers - Array of header column names
+   * @returns {'endc'|'nrca'|null}
+   */
+  function detectType(headers) {
+    const joined = headers.join(';').toLowerCase();
+    if (joined.includes(';dl1;') || joined.startsWith('combo;dl1')) return 'endc';
+    if (joined.includes(';nr dl1;') || joined.startsWith('combo;nr dl1')) return 'nrca';
+    return null;
+  }
+
+  /**
+   * Parse a full CSV string into an array of combo objects.
+   * @param {string} csvText - Raw CSV text
+   * @returns {{ type: 'endc'|'nrca', combos: Object[] }}
+   */
+  function parseCSV(csvText) {
+    const lines = csvText.trim().split('\n').map(l => l.trim()).filter(l => l);
+    if (lines.length < 2) return { type: null, combos: [] };
+
+    const headers = lines[0].split(';');
+    const type = detectType(headers);
+    if (!type) return { type: null, combos: [] };
+
+    const combos = [];
+    for (let i = 1; i < lines.length; i++) {
+      const fields = lines[i].split(';');
+      if (!fields[0]) continue;
+      const combo = type === 'endc'
+        ? parseEndcRow(headers, fields)
+        : parseNrcaRow(headers, fields);
+      combo._type = type;
+      combo._lineNum = i + 1;
+      combo._rawFields = fields;
+      combos.push(combo);
+    }
+    return { type, combos };
+  }
+
+  /**
+   * Parse a single EN-DC row.
+   * EN-DC columns: combo;DL1..DL5;UL1;MOD UL1;NR DL1;NR BW1;NR SCS1;NR DL2;NR BW2;NR SCS2;
+   *   NR UL1;NR UL BW1;NR UL SCS1;NR UL MOD1;mimo DL1..DL5;mimo NR DL1;mimo NR DL2;
+   *   mimo LTE UL1;mimo NR UL1;BCS NR;BCS LTE;BCS intraENDC
+   */
+  function parseEndcRow(headers, f) {
+    return {
+      combo: f[0] || '',
+      lteDL: [
+        { band: f[1], mimo: f[18] },
+        { band: f[2], mimo: f[19] },
+        { band: f[3], mimo: f[20] },
+        { band: f[4], mimo: f[21] },
+        { band: f[5], mimo: f[22] },
+      ].filter(b => b.band),
+      lteUL: [{ band: f[6], mod: f[7] }].filter(b => b.band),
+      lteULMimo: f[25] || '',
+      nrDL: [
+        { band: f[8], bw: f[9], scs: f[10], mimo: f[23] },
+        { band: f[11], bw: f[12], scs: f[13], mimo: f[24] },
+      ].filter(b => b.band),
+      nrUL: [{ band: f[14], bw: f[15], scs: f[16], mod: f[17], mimo: f[26] }].filter(b => b.band),
+      bcsNR: f[27] || '',
+      bcsLTE: f[28] || '',
+      bcsIntraENDC: f[29] || '',
+    };
+  }
+
+  /**
+   * Parse a single NR-CA row.
+   * NR-CA columns: combo;NR DL1;NR BW1;NR SCS1;...NR DL6;NR BW6;NR SCS6;
+   *   NR UL1;NR UL BW1;NR UL SCS1;NR UL MOD1;NR UL2;NR UL BW2;NR UL SCS2;NR UL MOD2;
+   *   mimo NR DL1..DL6;mimo NR UL1;mimo NR UL2;BCS
+   */
+  function parseNrcaRow(headers, f) {
+    return {
+      combo: f[0] || '',
+      nrDL: [
+        { band: f[1],  bw: f[2],  scs: f[3],  mimo: f[27] },
+        { band: f[4],  bw: f[5],  scs: f[6],  mimo: f[28] },
+        { band: f[7],  bw: f[8],  scs: f[9],  mimo: f[29] },
+        { band: f[10], bw: f[11], scs: f[12], mimo: f[30] },
+        { band: f[13], bw: f[14], scs: f[15], mimo: f[31] },
+        { band: f[16], bw: f[17], scs: f[18], mimo: f[32] },
+      ].filter(b => b.band),
+      nrUL: [
+        { band: f[19], bw: f[20], scs: f[21], mod: f[22], mimo: f[33] },
+        { band: f[23], bw: f[24], scs: f[25], mod: f[26], mimo: f[34] },
+      ].filter(b => b.band),
+      bcs: f[35] || '',
+    };
+  }
+
+  /**
+   * Create a canonical fingerprint for a combo row (used for exact-match diffing).
+   * @param {Object} combo - Parsed combo object
+   * @returns {string}
+   */
+  function fingerprint(combo) {
+    return combo._rawFields.join(';');
+  }
+
+  /**
+   * Extract all band numbers mentioned in a combo for search/filter purposes.
+   * @param {Object} combo
+   * @returns {string[]}
+   */
+  function extractBands(combo) {
+    const bands = new Set();
+    if (combo.lteDL) combo.lteDL.forEach(b => { if (b.band) bands.add(normBand(b.band)); });
+    if (combo.lteUL) combo.lteUL.forEach(b => { if (b.band) bands.add(normBand(b.band)); });
+    if (combo.nrDL) combo.nrDL.forEach(b => { if (b.band) bands.add(normBand(b.band)); });
+    if (combo.nrUL) combo.nrUL.forEach(b => { if (b.band) bands.add(normBand(b.band)); });
+    return [...bands];
+  }
+
+  /** Normalize band name to just the number, e.g. '78A' -> '78', '3A' -> '3' */
+  function normBand(band) {
+    if (!band) return '';
+    const m = band.match(/^(\d+)/);
+    return m ? m[1] : band;
+  }
+
+  return { parseCSV, fingerprint, extractBands, detectType };
+})();
+
+
+/* ==========================================================================
+   COMBO DIFFER — Diffs old and new combo sets.
+   ==========================================================================
+   EXTENDING: To add new diff strategies, add methods and update diff().
+   ========================================================================== */
+const ComboDiffer = (() => {
+
+  /**
+   * Diff two sets of combos.
+   * @param {Object[]} oldCombos
+   * @param {Object[]} newCombos
+   * @returns {{ added: Object[], removed: Object[], modified: {old: Object, new: Object, changes: Object[]}[], unchanged: Object[] }}
+   */
+  function diff(oldCombos, newCombos) {
+    const oldFingerprints = new Map();
+    const newFingerprints = new Map();
+
+    oldCombos.forEach(c => {
+      const fp = ComboParser.fingerprint(c);
+      if (!oldFingerprints.has(fp)) oldFingerprints.set(fp, []);
+      oldFingerprints.get(fp).push(c);
+    });
+
+    newCombos.forEach(c => {
+      const fp = ComboParser.fingerprint(c);
+      if (!newFingerprints.has(fp)) newFingerprints.set(fp, []);
+      newFingerprints.get(fp).push(c);
+    });
+
+    const unchanged = [];
+    const unmatchedOld = [];
+    const unmatchedNew = [];
+
+    const processedOldFPs = new Set();
+    const processedNewFPs = new Set();
+
+    for (const [fp, oldItems] of oldFingerprints) {
+      if (newFingerprints.has(fp)) {
+        const newItems = newFingerprints.get(fp);
+        const matchCount = Math.min(oldItems.length, newItems.length);
+        for (let i = 0; i < matchCount; i++) {
+          unchanged.push(oldItems[i]);
+        }
+        for (let i = matchCount; i < oldItems.length; i++) {
+          unmatchedOld.push(oldItems[i]);
+        }
+        for (let i = matchCount; i < newItems.length; i++) {
+          unmatchedNew.push(newItems[i]);
+        }
+        processedOldFPs.add(fp);
+        processedNewFPs.add(fp);
+      }
+    }
+
+    for (const [fp, items] of oldFingerprints) {
+      if (!processedOldFPs.has(fp)) unmatchedOld.push(...items);
+    }
+    for (const [fp, items] of newFingerprints) {
+      if (!processedNewFPs.has(fp)) unmatchedNew.push(...items);
+    }
+
+    const modified = [];
+    const added = [];
+    const removed = [];
+
+    const unmatchedOldByName = new Map();
+    const unmatchedNewByName = new Map();
+
+    unmatchedOld.forEach(c => {
+      if (!unmatchedOldByName.has(c.combo)) unmatchedOldByName.set(c.combo, []);
+      unmatchedOldByName.get(c.combo).push(c);
+    });
+
+    unmatchedNew.forEach(c => {
+      if (!unmatchedNewByName.has(c.combo)) unmatchedNewByName.set(c.combo, []);
+      unmatchedNewByName.get(c.combo).push(c);
+    });
+
+    const pairedOldIndices = new Set();
+    const pairedNewIndices = new Set();
+
+    // Pass 1: Exact name match → greedyPair for modification detection
+    for (const [name, oldItems] of unmatchedOldByName) {
+      if (!unmatchedNewByName.has(name)) continue;
+      const newItems = unmatchedNewByName.get(name);
+      const pairs = greedyPair(oldItems, newItems);
+      pairs.forEach(({ oldItem, newItem, changes }) => {
+        modified.push({ old: oldItem, new: newItem, changes });
+        pairedOldIndices.add(oldItem);
+        pairedNewIndices.add(newItem);
+      });
+    }
+
+    // Pass 2: Fuzzy match — group leftovers by band-structure key (ignoring MIMO/BCS/mod)
+    // This catches combos whose name changed because MIMO values are encoded in it
+    const leftoverOld = unmatchedOld.filter(c => !pairedOldIndices.has(c));
+    const leftoverNew = unmatchedNew.filter(c => !pairedNewIndices.has(c));
+
+    if (leftoverOld.length > 0 && leftoverNew.length > 0) {
+      const leftoverOldByBands = new Map();
+      const leftoverNewByBands = new Map();
+
+      leftoverOld.forEach(c => {
+        const key = bandStructureKey(c);
+        if (!leftoverOldByBands.has(key)) leftoverOldByBands.set(key, []);
+        leftoverOldByBands.get(key).push(c);
+      });
+      leftoverNew.forEach(c => {
+        const key = bandStructureKey(c);
+        if (!leftoverNewByBands.has(key)) leftoverNewByBands.set(key, []);
+        leftoverNewByBands.get(key).push(c);
+      });
+
+      for (const [key, oldItems] of leftoverOldByBands) {
+        if (!leftoverNewByBands.has(key)) continue;
+        const newItems = leftoverNewByBands.get(key);
+        const pairs = greedyPair(oldItems, newItems);
+        pairs.forEach(({ oldItem, newItem, changes }) => {
+          // Include the combo name change as a change too (field 0)
+          if (oldItem.combo !== newItem.combo) {
+            const nameAlreadyInChanges = changes.some(c => c.fieldIndex === 0);
+            if (!nameAlreadyInChanges) {
+              changes.unshift({ fieldIndex: 0, oldVal: oldItem.combo, newVal: newItem.combo });
+            }
+          }
+          modified.push({ old: oldItem, new: newItem, changes });
+          pairedOldIndices.add(oldItem);
+          pairedNewIndices.add(newItem);
+        });
+      }
+    }
+
+    unmatchedOld.forEach(c => {
+      if (!pairedOldIndices.has(c)) removed.push(c);
+    });
+    unmatchedNew.forEach(c => {
+      if (!pairedNewIndices.has(c)) added.push(c);
+    });
+
+    return { added, removed, modified, unchanged };
+  }
+
+  /**
+   * Build a key from the band-structure fields only (ignoring MIMO/BCS/mod/BW).
+   * This groups combos that use the same bands regardless of MIMO or BW config.
+   * For EN-DC: fields 1-5 (LTE DL), 6 (LTE UL), 8 (NR DL1), 11 (NR DL2), 14 (NR UL1)
+   * For NR-CA: fields 1,4,7,10,13,16 (NR DL), 19,23 (NR UL)
+   * Band fields contain values like "1A", "78A" — just the band identity.
+   */
+  function bandStructureKey(combo) {
+    const f = combo._rawFields;
+    if (combo._type === 'endc') {
+      return [f[1],f[2],f[3],f[4],f[5],f[6],f[8],f[11],f[14]].join('|');
+    } else if (combo._type === 'nrca') {
+      return [f[1],f[4],f[7],f[10],f[13],f[16],f[19],f[23]].join('|');
+    }
+    return f.join('|');
+  }
+
+  function greedyPair(oldItems, newItems) {
+    const pairs = [];
+    const usedOld = new Set();
+    const usedNew = new Set();
+
+    const distances = [];
+    for (let i = 0; i < oldItems.length; i++) {
+      for (let j = 0; j < newItems.length; j++) {
+        const changes = computeChanges(oldItems[i], newItems[j]);
+        distances.push({ i, j, changes, dist: changes.length });
+      }
+    }
+
+    distances.sort((a, b) => a.dist - b.dist);
+
+    for (const { i, j, changes } of distances) {
+      if (usedOld.has(i) || usedNew.has(j)) continue;
+      if (changes.length === 0) continue;
+      usedOld.add(i);
+      usedNew.add(j);
+      pairs.push({ oldItem: oldItems[i], newItem: newItems[j], changes });
+    }
+
+    return pairs;
+  }
+
+  /**
+   * Compute field-level changes between two combos.
+   * @returns {{ fieldIndex: number, oldVal: string, newVal: string }[]}
+   */
+  function computeChanges(oldC, newC) {
+    const changes = [];
+    const oldF = oldC._rawFields;
+    const newF = newC._rawFields;
+    const maxLen = Math.max(oldF.length, newF.length);
+
+    for (let i = 1; i < maxLen; i++) {
+      const ov = (oldF[i] || '').trim();
+      const nv = (newF[i] || '').trim();
+      if (ov !== nv) {
+        changes.push({ fieldIndex: i, oldVal: ov, newVal: nv });
+      }
+    }
+    return changes;
+  }
+
+  /**
+   * Compute band-level statistics from diff results.
+   */
+  function bandStats(diffResult) {
+    const stats = new Map();
+
+    function countBands(combo, key) {
+      ComboParser.extractBands(combo).forEach(band => {
+        if (!stats.has(band)) stats.set(band, { added: 0, removed: 0 });
+        stats.get(band)[key]++;
+      });
+    }
+
+    diffResult.added.forEach(c => countBands(c, 'added'));
+    diffResult.removed.forEach(c => countBands(c, 'removed'));
+
+    return stats;
+  }
+
+  return { diff, bandStats };
+})();
+
+
+/* ==========================================================================
+   COMBO RENDERER — Renders flat-text diff rows for the side-by-side table.
+   ==========================================================================
+   EXTENDING: To change how combos are displayed, modify renderComboLine()
+   or renderComboLineHL(). Band colors are in bandColor().
+   ========================================================================== */
+const ComboRenderer = (() => {
+
+  /** HTML-escape utility */
+  function esc(str) {
+    if (!str) return '';
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /**
+   * Band color mapping. Returns a CSS color for a given band number.
+   * Falls back to a hash-based color for unknown bands.
+   */
+  function bandColor(bandStr) {
+    if (!bandStr) return '#8b949e';
+    const num = bandStr.replace(/^n?(\d+).*/, '$1');
+    const colors = {
+      '1': '#6366f1', '2': '#818cf8', '3': '#a78bfa', '4': '#c084fc',
+      '5': '#e879f9', '7': '#f472b6', '8': '#fb7185', '11': '#fda4af',
+      '12': '#f97316', '13': '#fb923c', '14': '#fbbf24', '17': '#facc15',
+      '18': '#a3e635', '19': '#84cc16', '20': '#4ade80', '21': '#34d399',
+      '25': '#2dd4bf', '26': '#22d3ee', '28': '#14b8a6', '29': '#06b6d4',
+      '30': '#0ea5e9', '32': '#38bdf8', '38': '#60a5fa', '39': '#818cf8',
+      '40': '#a78bfa', '41': '#22d3ee', '42': '#e879f9', '46': '#f472b6',
+      '48': '#fb7185', '66': '#38bdf8', '71': '#60a5fa',
+      '77': '#0ea5e9', '78': '#0284c7', '79': '#0369a1',
+      '257': '#7c3aed', '258': '#9333ea', '260': '#a855f7', '261': '#c084fc',
+    };
+    if (colors[num]) return colors[num];
+    let hash = 0;
+    for (let i = 0; i < num.length; i++) hash = num.charCodeAt(i) + ((hash << 5) - hash);
+    const h = Math.abs(hash) % 360;
+    const s = 0.6, l = 0.6;
+    const a2 = s * Math.min(l, 1 - l);
+    const f = n => { const k = (n + h / 30) % 12; return l - a2 * Math.max(Math.min(k - 3, 9 - k, 1), -1); };
+    const toHex = x => Math.round(x * 255).toString(16).padStart(2, '0');
+    return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+  }
+
+  /**
+   * Column widths (in characters) for each segment, computed once after diffing.
+   * Keys: 'endc-dl-lte', 'endc-dl-nr', 'endc-dl-bw', 'endc-dl-mimo',
+   *        'endc-ul-lte', 'endc-ul-nr',
+   *        'nrca-dl-bands', 'nrca-dl-bw', 'nrca-dl-mimo',
+   *        'nrca-ul'
+   */
+  const colWidths = {};
+
+  /**
+   * Compute the plain-text length of a segment for a given combo.
+   * Strips HTML tags to measure actual character count.
+   */
+  function textLen(htmlStr) {
+    return htmlStr.replace(/<[^>]*>/g, '').length;
+  }
+
+  /**
+   * Measure segment text widths across all combos and store max in colWidths.
+   * Called once after entries are built.
+   */
+  function computeColumnWidths(allCombos) {
+    // Reset
+    for (const k of Object.keys(colWidths)) delete colWidths[k];
+
+    const widths = {};
+    function track(key, len) {
+      widths[key] = Math.max(widths[key] || 0, len);
+    }
+
+    for (const combo of allCombos) {
+      if (combo._type === 'endc') {
+        // LTE DL bands
+        if (combo.lteDL.length) {
+          const s = combo.lteDL.map(b => b.band || '').join(' + ');
+          track('endc-dl-lte', s.length);
+        }
+        // NR DL bands
+        if (combo.nrDL.length) {
+          const s = combo.nrDL.map(b => {
+            const prefix = (!b.band.startsWith('n')) ? 'n' : '';
+            return prefix + b.band;
+          }).join(' + ');
+          track('endc-dl-nr', s.length);
+          // NR BWs
+          const bwStr = combo.nrDL.map(b => b.bw || '-').join('+');
+          track('endc-dl-bw', bwStr.length);
+        }
+        // MIMO
+        const lteMimos = combo.lteDL.map(b => b.mimo || '-');
+        const nrMimos = combo.nrDL.map(b => b.mimo || '-');
+        const hasLte = lteMimos.some(m => m && m !== '-');
+        const hasNr = nrMimos.some(m => m && m !== '-');
+        if (hasLte || hasNr) {
+          const mimoStr = [
+            hasLte ? lteMimos.join('+') : null,
+            hasNr ? nrMimos.join('+') : null,
+          ].filter(Boolean).join(' ');
+          track('endc-dl-mimo', mimoStr.length);
+        }
+        // UL LTE
+        if (combo.lteUL?.length) {
+          const s = combo.lteUL.map(b => b.band || '').join(' + ');
+          track('endc-ul-lte', s.length);
+        }
+        // UL NR (with BW inline)
+        if (combo.nrUL?.length) {
+          const s = combo.nrUL.map(b => {
+            const prefix = (b.band && !b.band.startsWith('n')) ? 'n' : '';
+            let t = prefix + (b.band || '');
+            if (b.bw) t += ' ' + b.bw + 'MHz';
+            return t;
+          }).join(' + ');
+          track('endc-ul-nr', s.length);
+        }
+      } else if (combo._type === 'nrca') {
+        // NR DL bands
+        const s = combo.nrDL.map(b => {
+          const prefix = (b.band && !b.band.startsWith('n')) ? 'n' : '';
+          return prefix + (b.band || '');
+        }).join(' + ');
+        track('nrca-dl-bands', s.length);
+        // BWs
+        const bwStr = combo.nrDL.map(b => b.bw || '-').join('+');
+        track('nrca-dl-bw', bwStr.length);
+        // MIMO
+        const dlMimos = combo.nrDL.map(b => b.mimo || '-');
+        if (dlMimos.some(m => m && m !== '-')) {
+          track('nrca-dl-mimo', dlMimos.join('+').length);
+        }
+        // UL
+        if (combo.nrUL?.length) {
+          const s = combo.nrUL.map(b => {
+            const prefix = (b.band && !b.band.startsWith('n')) ? 'n' : '';
+            let t = prefix + (b.band || '');
+            if (b.bw) t += ' ' + b.bw + 'MHz';
+            return t;
+          }).join(' + ');
+          track('nrca-ul', s.length);
+        }
+      }
+    }
+
+    // Store with a small margin
+    for (const [k, v] of Object.entries(widths)) {
+      colWidths[k] = v;
+    }
+  }
+
+  /**
+   * Wrap a segment's HTML content in a fixed-width span.
+   */
+  function seg(key, html) {
+    const w = colWidths[key] || 0;
+    if (!w) return html;
+    return `<span class="seg" style="min-width:${w}ch">${html}</span>`;
+  }
+
+  /** Pipe separator between segments */
+  const PIPE = '<span class="seg-pipe">|</span>';
+
+  /**
+   * Render a colored band name as flat text (no pill), without BW.
+   */
+  function bandName(band, isNR) {
+    const color = bandColor(band.band);
+    const prefix = isNR && !band.band.startsWith('n') ? 'n' : '';
+    return `<span style="color:${color}">${prefix}${esc(band.band)}</span>`;
+  }
+
+  /**
+   * Render a colored band name with BW inline (used for UL and NR-CA).
+   */
+  function bandTextWithBW(band, isNR) {
+    let text = bandName(band, isNR);
+    if (band.bw) text += ` ${esc(band.bw)}MHz`;
+    return text;
+  }
+
+  /**
+   * Render a single combo as a flat text line with fixed-width segments.
+   *
+   * EN-DC DL: DL LTE_bands | NR_bands | NR_BWs | LTE_MIMO NR_MIMO
+   * NR-CA DL: DL NR_bands | NR_BWs | MIMO
+   * UL keeps BW inline: UL LTE_band | NR_band BW
+   */
+  function renderComboLine(combo) {
+    const plus = ' <span class="band-sep">+</span> ';
+
+    if (combo._type === 'endc') {
+      // DL segments
+      const dlSegs = [];
+      if (combo.lteDL.length) {
+        dlSegs.push(seg('endc-dl-lte', combo.lteDL.map(b => bandName(b, false)).join(plus)));
+      }
+      if (combo.nrDL.length) {
+        dlSegs.push(seg('endc-dl-nr', combo.nrDL.map(b => bandName(b, true)).join(plus)));
+        dlSegs.push(seg('endc-dl-bw', combo.nrDL.map(b => esc(b.bw || '-')).join('+')));
+      }
+      const lteMimos = combo.lteDL.map(b => b.mimo || '-');
+      const nrMimos = combo.nrDL.map(b => b.mimo || '-');
+      const hasLteMimo = lteMimos.some(m => m && m !== '-');
+      const hasNrMimo = nrMimos.some(m => m && m !== '-');
+      if (hasLteMimo || hasNrMimo) {
+        const mimoStr = [
+          hasLteMimo ? lteMimos.join('+') : null,
+          hasNrMimo ? nrMimos.join('+') : null,
+        ].filter(Boolean).join(' ');
+        dlSegs.push(seg('endc-dl-mimo', mimoStr));
+      }
+      let html = `<span class="row-label">DL</span> ${dlSegs.join(PIPE)}`;
+
+      // UL segments
+      const ulSegs = [];
+      if (combo.lteUL.length) {
+        ulSegs.push(seg('endc-ul-lte', combo.lteUL.map(b => bandName(b, false)).join(plus)));
+      }
+      if (combo.nrUL.length) {
+        ulSegs.push(seg('endc-ul-nr', combo.nrUL.map(b => bandTextWithBW(b, true)).join(plus)));
+      }
+      if (ulSegs.length) {
+        html += `&nbsp; <span class="row-label">UL</span> ${ulSegs.join(PIPE)}`;
+      }
+      return html;
+
+    } else if (combo._type === 'nrca') {
+      // DL segments
+      const dlSegs = [];
+      dlSegs.push(seg('nrca-dl-bands', combo.nrDL.map(b => bandName(b, true)).join(plus)));
+      const bws = combo.nrDL.map(b => b.bw || '-');
+      if (bws.some(b => b && b !== '-')) {
+        dlSegs.push(seg('nrca-dl-bw', bws.map(b => esc(b)).join('+')));
+      }
+      const dlMimos = combo.nrDL.map(b => b.mimo || '-');
+      if (dlMimos.some(m => m && m !== '-')) {
+        dlSegs.push(seg('nrca-dl-mimo', dlMimos.join('+')));
+      }
+      let html = `<span class="row-label">DL</span> ${dlSegs.join(PIPE)}`;
+
+      // UL
+      if (combo.nrUL.length) {
+        html += `&nbsp; <span class="row-label">UL</span> ${seg('nrca-ul', combo.nrUL.map(b => bandTextWithBW(b, true)).join(plus))}`;
+      }
+      return html;
+    }
+    return '';
+  }
+
+  /**
+   * Render a combo line with field-level highlights for modified rows.
+   * Same layout as renderComboLine but with highlight spans on changed fields.
+   */
+  function renderComboLineHL(combo, highlightMap, side) {
+    const hlCls = side === 'old' ? 'hl-old' : 'hl-new';
+    const plus = ' <span class="band-sep">+</span> ';
+
+    function hl(fieldIndex, value) {
+      if (highlightMap.has(fieldIndex)) {
+        return `<span class="${hlCls}">${esc(value || '(empty)')}</span>`;
+      }
+      return esc(value);
+    }
+
+    function bandNameHL(band, fieldIndex, isNR) {
+      const color = bandColor(band.band);
+      const prefix = isNR && !band.band.startsWith('n') ? 'n' : '';
+      if (fieldIndex !== undefined && highlightMap.has(fieldIndex)) {
+        return `<span class="${hlCls}" style="color:${color}">${prefix}${esc(band.band)}</span>`;
+      }
+      return `<span style="color:${color}">${prefix}${esc(band.band)}</span>`;
+    }
+
+    function bandTextWithBWHL(band, bandFI, bwFI, isNR) {
+      let text = bandNameHL(band, bandFI, isNR);
+      if (band.bw) {
+        if (bwFI !== undefined && highlightMap.has(bwFI)) {
+          text += ` <span class="${hlCls}">${esc(band.bw)}MHz</span>`;
+        } else {
+          text += ` ${esc(band.bw)}MHz`;
+        }
+      }
+      return text;
+    }
+
+    if (combo._type === 'endc') {
+      const lteDLFI = [1, 2, 3, 4, 5];
+      const nrDLBandFI = [8, 11];
+      const nrDLBwFI = [9, 12];
+      const mimoLTEIdx = [18, 19, 20, 21, 22];
+      const mimoNRIdx = [23, 24];
+
+      const dlSegs = [];
+      if (combo.lteDL.length) {
+        dlSegs.push(seg('endc-dl-lte', combo.lteDL.map((b, i) =>
+          bandNameHL(b, lteDLFI[i], false)
+        ).join(plus)));
+      }
+      if (combo.nrDL.length) {
+        dlSegs.push(seg('endc-dl-nr', combo.nrDL.map((b, i) =>
+          bandNameHL(b, nrDLBandFI[i], true)
+        ).join(plus)));
+        dlSegs.push(seg('endc-dl-bw', combo.nrDL.map((b, i) =>
+          hl(nrDLBwFI[i], b.bw || '-')
+        ).join('+')));
+      }
+      const lteMimos = combo.lteDL.map((b, i) => hl(mimoLTEIdx[i], b.mimo || '-'));
+      const nrMimos = combo.nrDL.map((b, i) => hl(mimoNRIdx[i], b.mimo || '-'));
+      const hasLteMimo = combo.lteDL.some(b => b.mimo && b.mimo !== '-');
+      const hasNrMimo = combo.nrDL.some(b => b.mimo && b.mimo !== '-');
+      if (hasLteMimo || hasNrMimo) {
+        const mimoStr = [
+          hasLteMimo ? lteMimos.join('+') : null,
+          hasNrMimo ? nrMimos.join('+') : null,
+        ].filter(Boolean).join(' ');
+        dlSegs.push(seg('endc-dl-mimo', mimoStr));
+      }
+      let html = `<span class="row-label">DL</span> ${dlSegs.join(PIPE)}`;
+
+      const ulSegs = [];
+      if (combo.lteUL.length) {
+        ulSegs.push(seg('endc-ul-lte', combo.lteUL.map(b =>
+          bandNameHL(b, 6, false)
+        ).join(plus)));
+      }
+      if (combo.nrUL.length) {
+        ulSegs.push(seg('endc-ul-nr', combo.nrUL.map(b =>
+          bandTextWithBWHL(b, 14, 15, true)
+        ).join(plus)));
+      }
+      if (ulSegs.length) {
+        html += `&nbsp; <span class="row-label">UL</span> ${ulSegs.join(PIPE)}`;
+      }
+      return html;
+
+    } else if (combo._type === 'nrca') {
+      const nrDLFI = [
+        { band: 1, bw: 2 }, { band: 4, bw: 5 }, { band: 7, bw: 8 },
+        { band: 10, bw: 11 }, { band: 13, bw: 14 }, { band: 16, bw: 17 },
+      ];
+      const mimoIdx = [27, 28, 29, 30, 31, 32];
+
+      const dlSegs = [];
+      dlSegs.push(seg('nrca-dl-bands', combo.nrDL.map((b, i) =>
+        bandNameHL(b, nrDLFI[i]?.band, true)
+      ).join(plus)));
+      const bws = combo.nrDL.map((b, i) => hl(nrDLFI[i]?.bw, b.bw || '-'));
+      if (combo.nrDL.some(b => b.bw && b.bw !== '-')) {
+        dlSegs.push(seg('nrca-dl-bw', bws.join('+')));
+      }
+      const dlMimos = combo.nrDL.map((b, i) => hl(mimoIdx[i], b.mimo || '-'));
+      if (combo.nrDL.some(b => b.mimo && b.mimo !== '-')) {
+        dlSegs.push(seg('nrca-dl-mimo', dlMimos.join('+')));
+      }
+      let html = `<span class="row-label">DL</span> ${dlSegs.join(PIPE)}`;
+
+      if (combo.nrUL.length) {
+        const nrULFI = [{ band: 19, bw: 20 }, { band: 23, bw: 24 }];
+        html += `&nbsp; <span class="row-label">UL</span> ${seg('nrca-ul', combo.nrUL.map((b, i) =>
+          bandTextWithBWHL(b, nrULFI[i]?.band, nrULFI[i]?.bw, true)
+        ).join(plus))}`;
+      }
+      return html;
+    }
+    return '';
+  }
+
+  /**
+   * Build tooltip HTML for BCS and modulation info.
+   * @param {Object} combo - Parsed combo object
+   * @param {Object} [changesMap] - Optional set of changed fieldIndices (for highlighting)
+   * @returns {string} HTML for tooltip content
+   */
+  function buildTooltip(combo, changesMap) {
+    if (!combo) return '';
+    const parts = [];
+
+    if (combo._type === 'endc') {
+      // Modulation: UL mod at field 7, NR UL mod at field 17
+      const lteMod = combo.lteUL?.[0]?.mod;
+      const nrMod = combo.nrUL?.[0]?.mod;
+      if (lteMod || nrMod) {
+        const modParts = [];
+        if (lteMod) {
+          const cls = changesMap?.has(7) ? 'tt-hl' : 'tt-val';
+          modParts.push(`LTE UL: <span class="${cls}">${esc(lteMod)}</span>`);
+        }
+        if (nrMod) {
+          const cls = changesMap?.has(17) ? 'tt-hl' : 'tt-val';
+          modParts.push(`NR UL: <span class="${cls}">${esc(nrMod)}</span>`);
+        }
+        parts.push(`<span class="tt-label">MOD</span> ${modParts.join(' &middot; ')}`);
+      }
+      // BCS: NR=27, LTE=28, intraENDC=29
+      const bcsItems = [];
+      if (combo.bcsNR) {
+        const cls = changesMap?.has(27) ? 'tt-hl' : 'tt-val';
+        bcsItems.push(`NR: <span class="${cls}">${esc(combo.bcsNR)}</span>`);
+      }
+      if (combo.bcsLTE) {
+        const cls = changesMap?.has(28) ? 'tt-hl' : 'tt-val';
+        bcsItems.push(`LTE: <span class="${cls}">${esc(combo.bcsLTE)}</span>`);
+      }
+      if (combo.bcsIntraENDC) {
+        const cls = changesMap?.has(29) ? 'tt-hl' : 'tt-val';
+        bcsItems.push(`intra: <span class="${cls}">${esc(combo.bcsIntraENDC)}</span>`);
+      }
+      if (bcsItems.length) {
+        parts.push(`<span class="tt-label">BCS</span> ${bcsItems.join(' &middot; ')}`);
+      }
+      // SCS (if present)
+      const scsVals = [];
+      if (combo.nrDL?.[0]?.scs) scsVals.push(`DL1: ${esc(combo.nrDL[0].scs)}`);
+      if (combo.nrDL?.[1]?.scs) scsVals.push(`DL2: ${esc(combo.nrDL[1].scs)}`);
+      if (combo.nrUL?.[0]?.scs) scsVals.push(`UL1: ${esc(combo.nrUL[0].scs)}`);
+      if (scsVals.length) {
+        parts.push(`<span class="tt-label">SCS</span> <span class="tt-val">${scsVals.join(' &middot; ')}</span>`);
+      }
+    } else if (combo._type === 'nrca') {
+      // Modulation: UL1 mod at field 22, UL2 mod at field 26
+      const modParts = [];
+      if (combo.nrUL?.[0]?.mod) {
+        const cls = changesMap?.has(22) ? 'tt-hl' : 'tt-val';
+        modParts.push(`UL1: <span class="${cls}">${esc(combo.nrUL[0].mod)}</span>`);
+      }
+      if (combo.nrUL?.[1]?.mod) {
+        const cls = changesMap?.has(26) ? 'tt-hl' : 'tt-val';
+        modParts.push(`UL2: <span class="${cls}">${esc(combo.nrUL[1].mod)}</span>`);
+      }
+      if (modParts.length) {
+        parts.push(`<span class="tt-label">MOD</span> ${modParts.join(' &middot; ')}`);
+      }
+      // BCS at field 35
+      if (combo.bcs) {
+        const cls = changesMap?.has(35) ? 'tt-hl' : 'tt-val';
+        parts.push(`<span class="tt-label">BCS</span> <span class="${cls}">${esc(combo.bcs)}</span>`);
+      }
+      // SCS (if present)
+      const scsVals = [];
+      combo.nrDL?.forEach((b, i) => { if (b.scs) scsVals.push(`DL${i+1}: ${esc(b.scs)}`); });
+      combo.nrUL?.forEach((b, i) => { if (b.scs) scsVals.push(`UL${i+1}: ${esc(b.scs)}`); });
+      if (scsVals.length) {
+        parts.push(`<span class="tt-label">SCS</span> <span class="tt-val">${scsVals.join(' &middot; ')}</span>`);
+      }
+    }
+
+    // Also show the combo name
+    const name = combo.combo;
+    if (name) {
+      parts.unshift(`<span class="tt-label">COMBO</span> <span class="tt-val">${esc(name)}</span>`);
+    }
+
+    return parts.join(' &nbsp;|&nbsp; ');
+  }
+
+  /**
+   * Wrap tooltip HTML in a tooltip div element.
+   */
+  function tooltipDiv(html) {
+    if (!html) return '';
+    return `<div class="tooltip">${html}</div>`;
+  }
+
+  /**
+   * Render a diff row (one grid row in the side-by-side table).
+   * @param {Object} entry - { diffStatus, combo?, old?, new?, changes? }
+   * @returns {string} HTML for a .diff-row
+   */
+  function renderDiffRow(entry) {
+    const { diffStatus } = entry;
+
+    if (diffStatus === 'added') {
+      const tt = tooltipDiv(buildTooltip(entry.combo));
+      return `<div class="diff-row row-added">` +
+        `<div class="diff-cell cell-old cell-empty"></div>` +
+        `<div class="diff-cell cell-new">${renderComboLine(entry.combo)}</div>` +
+        tt +
+        `</div>`;
+    }
+
+    if (diffStatus === 'removed') {
+      const tt = tooltipDiv(buildTooltip(entry.combo));
+      return `<div class="diff-row row-removed">` +
+        `<div class="diff-cell cell-old">${renderComboLine(entry.combo)}</div>` +
+        `<div class="diff-cell cell-new cell-empty"></div>` +
+        tt +
+        `</div>`;
+    }
+
+    if (diffStatus === 'modified') {
+      const highlightMap = new Map();
+      entry.changes.forEach(c => {
+        highlightMap.set(c.fieldIndex, true);
+      });
+
+      const oldLine = renderComboLineHL(entry.old, highlightMap, 'old');
+      const newLine = renderComboLineHL(entry.new, highlightMap, 'new');
+      // Show tooltip for new side (with changes highlighted)
+      const tt = tooltipDiv(buildTooltip(entry.new, highlightMap));
+
+      return `<div class="diff-row row-modified">` +
+        `<div class="diff-cell cell-old">${oldLine}</div>` +
+        `<div class="diff-cell cell-new">${newLine}</div>` +
+        tt +
+        `</div>`;
+    }
+
+    // unchanged
+    const line = renderComboLine(entry.combo);
+    const tt = tooltipDiv(buildTooltip(entry.combo));
+    return `<div class="diff-row row-unchanged">` +
+      `<div class="diff-cell cell-old">${line}</div>` +
+      `<div class="diff-cell cell-new">${line}</div>` +
+      tt +
+      `</div>`;
+  }
+
+  return { renderDiffRow, bandColor, computeColumnWidths };
+})();
+
+
+/* ==========================================================================
+   APP CONTROLLER — Manages state, file loading, filtering, and rendering.
+   ==========================================================================
+   EXTENDING: To add new features, hook into the event system or extend
+   the filter/render pipeline.
+   ========================================================================== */
+const AppController = (() => {
+
+  const state = {
+    oldFiles: { endc: null, nrca: null },
+    newFiles: { endc: null, nrca: null },
+    diffResults: { endc: null, nrca: null },
+    allEntries: [],
+    filteredEntries: [],
+    view: 'changes',
+    typeFilter: 'all',
+    statusFilter: 'all',
+    searchQuery: '',
+    page: 1,
+    pageSize: 80,
+  };
+
+  const els = {};
+
+  function init() {
+    els.dropOld = document.getElementById('dropOld');
+    els.dropNew = document.getElementById('dropNew');
+    els.dropOldFiles = document.getElementById('dropOldFiles');
+    els.dropNewFiles = document.getElementById('dropNewFiles');
+    els.summaryBar = document.getElementById('summaryBar');
+    els.filterBar = document.getElementById('filterBar');
+    els.diffSection = document.getElementById('diffSection');
+    els.diffBody = document.getElementById('diffBody');
+    els.colHeaderOld = document.getElementById('colHeaderOld');
+    els.colHeaderNew = document.getElementById('colHeaderNew');
+    els.emptyState = document.getElementById('emptyState');
+    els.searchInput = document.getElementById('searchInput');
+    els.resultCount = document.getElementById('resultCount');
+    els.pageInfo = document.getElementById('pageInfo');
+    els.prevPage = document.getElementById('prevPage');
+    els.nextPage = document.getElementById('nextPage');
+
+    setupDropZone(els.dropOld, 'old');
+    setupDropZone(els.dropNew, 'new');
+    setupFilters();
+    setupPagination();
+  }
+
+  function setupDropZone(zone, target) {
+    const input = zone.querySelector('input[type="file"]');
+
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(evt => {
+      zone.addEventListener(evt, e => { e.preventDefault(); e.stopPropagation(); });
+    });
+
+    zone.addEventListener('dragenter', () => zone.classList.add('drag-over'));
+    zone.addEventListener('dragover', () => zone.classList.add('drag-over'));
+    zone.addEventListener('dragleave', (e) => {
+      if (!zone.contains(e.relatedTarget)) zone.classList.remove('drag-over');
+    });
+
+    zone.addEventListener('drop', (e) => {
+      zone.classList.remove('drag-over');
+      const files = Array.from(e.dataTransfer.files).filter(f => f.name.endsWith('.csv'));
+      if (files.length) handleFiles(files, target);
+    });
+
+    input.addEventListener('change', (e) => {
+      const files = Array.from(e.target.files).filter(f => f.name.endsWith('.csv'));
+      if (files.length) handleFiles(files, target);
+      input.value = '';
+    });
+  }
+
+  async function handleFiles(files, target) {
+    const fileInfoEl = target === 'old' ? els.dropOldFiles : els.dropNewFiles;
+    const zone = target === 'old' ? els.dropOld : els.dropNew;
+    const stateTarget = target === 'old' ? state.oldFiles : state.newFiles;
+
+    for (const file of files) {
+      const text = await file.text();
+      const parsed = ComboParser.parseCSV(text);
+      if (parsed.type) {
+        parsed._filename = file.name;
+        stateTarget[parsed.type] = parsed;
+      }
+    }
+
+    const displayParts = [];
+    if (stateTarget.endc) displayParts.push(`${stateTarget.endc._filename} (EN-DC, ${stateTarget.endc.combos.length} combos)`);
+    if (stateTarget.nrca) displayParts.push(`${stateTarget.nrca._filename} (NR-CA, ${stateTarget.nrca.combos.length} combos)`);
+    fileInfoEl.textContent = displayParts.join(', ');
+    zone.classList.add('has-file');
+
+    tryRunDiff();
+  }
+
+  function tryRunDiff() {
+    let hasDiff = false;
+
+    for (const type of ['endc', 'nrca']) {
+      if (state.oldFiles[type] && state.newFiles[type]) {
+        state.diffResults[type] = ComboDiffer.diff(
+          state.oldFiles[type].combos,
+          state.newFiles[type].combos
+        );
+        hasDiff = true;
+      } else {
+        state.diffResults[type] = null;
+      }
+    }
+
+    if (hasDiff) {
+      // Update column headers with filenames
+      const oldNames = [];
+      const newNames = [];
+      for (const type of ['endc', 'nrca']) {
+        if (state.oldFiles[type]) oldNames.push(state.oldFiles[type]._filename);
+        if (state.newFiles[type]) newNames.push(state.newFiles[type]._filename);
+      }
+      els.colHeaderOld.textContent = `OLD — ${oldNames.join(', ')}`;
+      els.colHeaderNew.textContent = `NEW — ${newNames.join(', ')}`;
+
+      buildEntries();
+      renderSummary();
+      applyFilters();
+      showUI();
+    }
+  }
+
+  function buildEntries() {
+    state.allEntries = [];
+    const allCombos = [];
+
+    for (const type of ['endc', 'nrca']) {
+      const diff = state.diffResults[type];
+      if (!diff) continue;
+
+      const typeEntries = [];
+
+      diff.added.forEach(c => { typeEntries.push({
+        diffStatus: 'added', combo: c, searchText: buildSearchText(c),
+      }); allCombos.push(c); });
+      diff.removed.forEach(c => { typeEntries.push({
+        diffStatus: 'removed', combo: c, searchText: buildSearchText(c),
+      }); allCombos.push(c); });
+      diff.modified.forEach(m => { typeEntries.push({
+        diffStatus: 'modified', old: m.old, new: m.new, changes: m.changes,
+        searchText: buildSearchText(m.old) + ' ' + buildSearchText(m.new),
+      }); allCombos.push(m.old); allCombos.push(m.new); });
+      diff.unchanged.forEach(c => { typeEntries.push({
+        diffStatus: 'unchanged', combo: c, searchText: buildSearchText(c),
+      }); allCombos.push(c); });
+
+      // Sort all entries by combo name (alphabetical) for git-diff interleaving
+      typeEntries.sort((a, b) => {
+        const nameA = a.combo?.combo || a.old?.combo || '';
+        const nameB = b.combo?.combo || b.old?.combo || '';
+        if (nameA !== nameB) return nameA.localeCompare(nameB);
+        // Within same name, show changes before unchanged
+        const order = { modified: 0, removed: 1, added: 2, unchanged: 3 };
+        return order[a.diffStatus] - order[b.diffStatus];
+      });
+
+      state.allEntries.push(...typeEntries);
+    }
+
+    // Compute fixed column widths across all combos for aligned rendering
+    ComboRenderer.computeColumnWidths(allCombos);
+  }
+
+  function buildSearchText(combo) {
+    const parts = [combo.combo];
+    if (combo.lteDL) combo.lteDL.forEach(b => parts.push(b.band));
+    if (combo.nrDL) combo.nrDL.forEach(b => { parts.push(b.band); if (b.bw) parts.push(b.bw); });
+    if (combo.nrUL) combo.nrUL.forEach(b => { parts.push(b.band); if (b.bw) parts.push(b.bw); });
+    return parts.join(' ').toLowerCase();
+  }
+
+  function renderSummary() {
+    let totalAdded = 0, totalRemoved = 0, totalModified = 0, totalUnchanged = 0;
+    const allBandStats = new Map();
+
+    for (const type of ['endc', 'nrca']) {
+      const diff = state.diffResults[type];
+      if (!diff) continue;
+      totalAdded += diff.added.length;
+      totalRemoved += diff.removed.length;
+      totalModified += diff.modified.length;
+      totalUnchanged += diff.unchanged.length;
+
+      const bs = ComboDiffer.bandStats(diff);
+      for (const [band, counts] of bs) {
+        if (!allBandStats.has(band)) allBandStats.set(band, { added: 0, removed: 0 });
+        allBandStats.get(band).added += counts.added;
+        allBandStats.get(band).removed += counts.removed;
+      }
+    }
+
+    const total = totalAdded + totalRemoved + totalModified + totalUnchanged;
+
+    // Build compact summary bar
+    let html = `<span class="stat-total">${total} combos</span>`;
+    html += `<span class="sep">|</span>`;
+    html += `<span class="stat-added">+${totalAdded} added</span>`;
+    html += `<span class="stat-removed">&minus;${totalRemoved} removed</span>`;
+    html += `<span class="stat-modified">~${totalModified} modified</span>`;
+    html += `<span class="stat-unchanged">${totalUnchanged} unchanged</span>`;
+
+    // Band changes
+    const sortedBands = [...allBandStats.entries()]
+      .filter(([, c]) => c.added > 0 || c.removed > 0)
+      .sort((a, b) => (b[1].added + b[1].removed) - (a[1].added + a[1].removed))
+      .slice(0, 10);
+
+    if (sortedBands.length) {
+      html += `<span class="band-changes">`;
+      html += `<span class="band-changes-label">Bands:</span>`;
+      sortedBands.forEach(([band, counts]) => {
+        const color = ComboRenderer.bandColor(band);
+        let label = `<span style="color:${color}">B${band}</span>`;
+        const details = [];
+        if (counts.added) details.push(`<span class="stat-added">+${counts.added}</span>`);
+        if (counts.removed) details.push(`<span class="stat-removed">-${counts.removed}</span>`);
+        html += `${label}${details.join('/')} `;
+      });
+      html += `</span>`;
+    }
+
+    els.summaryBar.innerHTML = html;
+  }
+
+  function setupFilters() {
+    document.querySelectorAll('#viewToggle .toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#viewToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.view = btn.dataset.view;
+        state.page = 1;
+        applyFilters();
+      });
+    });
+
+    document.querySelectorAll('#typeToggle .toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#typeToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.typeFilter = btn.dataset.type;
+        state.page = 1;
+        applyFilters();
+      });
+    });
+
+    document.querySelectorAll('#statusToggle .toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#statusToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.statusFilter = btn.dataset.status;
+        state.page = 1;
+        applyFilters();
+      });
+    });
+
+    let searchTimeout = null;
+    els.searchInput.addEventListener('input', () => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => {
+        state.searchQuery = els.searchInput.value.toLowerCase().trim();
+        state.page = 1;
+        applyFilters();
+      }, 150);
+    });
+  }
+
+  /**
+   * Number of unchanged "context" lines to show around each change (like git diff -U).
+   */
+  const CONTEXT_LINES = 2;
+
+  function applyFilters() {
+    let entries = state.allEntries;
+
+    // Apply type filter first (before context calculation)
+    if (state.typeFilter !== 'all') {
+      entries = entries.filter(e => {
+        const type = e.combo?._type || e.old?._type || '';
+        return type === state.typeFilter;
+      });
+    }
+
+    // Apply status filter
+    if (state.statusFilter !== 'all') {
+      entries = entries.filter(e => e.diffStatus === state.statusFilter);
+    }
+
+    // Apply search filter
+    if (state.searchQuery) {
+      entries = entries.filter(e => e.searchText.includes(state.searchQuery));
+    }
+
+    // When view=changes and no explicit status/search filter narrowing,
+    // do git-diff-style context: show unchanged lines near changes, fold the rest
+    if (state.view === 'changes' && state.statusFilter === 'all' && !state.searchQuery) {
+      entries = addContextAndFolds(entries);
+    } else if (state.view === 'changes') {
+      // If a specific status filter is active, just remove unchanged
+      entries = entries.filter(e => e.diffStatus !== 'unchanged');
+    }
+
+    state.filteredEntries = entries;
+    renderList();
+  }
+
+  /**
+   * Git-diff-style context: mark unchanged entries near changes as visible context,
+   * collapse long runs of unchanged entries into fold markers.
+   */
+  function addContextAndFolds(entries) {
+    // First, identify which indices are "changes"
+    const isChange = entries.map(e => e.diffStatus !== 'unchanged');
+
+    // Mark unchanged entries within CONTEXT_LINES of a change as context
+    const isContext = new Array(entries.length).fill(false);
+    for (let i = 0; i < entries.length; i++) {
+      if (isChange[i]) {
+        // Mark surrounding unchanged as context
+        for (let j = Math.max(0, i - CONTEXT_LINES); j <= Math.min(entries.length - 1, i + CONTEXT_LINES); j++) {
+          if (!isChange[j]) isContext[j] = true;
+        }
+      }
+    }
+
+    // Build result with fold separators
+    const result = [];
+    let foldCount = 0;
+    let foldType = null;
+    let prevType = null;
+
+    for (let i = 0; i < entries.length; i++) {
+      const entryType = entries[i].combo?._type || entries[i].old?._type || '';
+
+      // If we crossed a type boundary, flush any pending fold
+      if (entryType !== prevType && prevType !== null) {
+        if (foldCount > 0) {
+          result.push({ diffStatus: 'fold', count: foldCount, _type: foldType });
+          foldCount = 0;
+        }
+      }
+      prevType = entryType;
+
+      if (isChange[i] || isContext[i]) {
+        // Flush any pending fold before this visible entry
+        if (foldCount > 0) {
+          result.push({ diffStatus: 'fold', count: foldCount, _type: foldType });
+          foldCount = 0;
+        }
+        result.push(entries[i]);
+      } else {
+        // Accumulate fold
+        foldCount++;
+        foldType = entryType;
+      }
+    }
+
+    // Flush trailing fold
+    if (foldCount > 0) {
+      result.push({ diffStatus: 'fold', count: foldCount, _type: foldType });
+    }
+
+    return result;
+  }
+
+  function renderList() {
+    const { filteredEntries, page, pageSize } = state;
+    const totalPages = Math.max(1, Math.ceil(filteredEntries.length / pageSize));
+
+    if (state.page > totalPages) state.page = totalPages;
+    if (state.page < 1) state.page = 1;
+
+    const start = (state.page - 1) * pageSize;
+    const end = Math.min(start + pageSize, filteredEntries.length);
+    const pageEntries = filteredEntries.slice(start, end);
+
+    if (pageEntries.length === 0) {
+      els.diffBody.innerHTML = `<div style="text-align:center; padding:40px 20px; color:var(--text-muted); font-size:0.85rem;">No combos match the current filters.</div>`;
+    } else {
+      // Group by type and insert section headers
+      let html = '';
+      let currentType = null;
+
+      for (const entry of pageEntries) {
+        const entryType = entry.combo?._type || entry.old?._type || entry._type || '';
+
+        if (entryType !== currentType) {
+          currentType = entryType;
+          // Count changes for this type in the full filtered set
+          const typeEntries = filteredEntries.filter(e => {
+            const t = e.combo?._type || e.old?._type || e._type || '';
+            return t === entryType;
+          });
+          const changeCount = typeEntries.filter(e => e.diffStatus !== 'unchanged' && e.diffStatus !== 'fold').length;
+          const typeLabel = entryType === 'endc' ? 'EN-DC' : 'NR-CA';
+          html += `<div class="diff-type-header">${typeLabel} <span class="change-count">(${changeCount} changes)</span></div>`;
+        }
+
+        if (entry.diffStatus === 'fold') {
+          html += `<div class="diff-fold">` +
+            `<div class="diff-fold-cell">~~~ ${entry.count} unchanged combos ~~~</div>` +
+            `<div class="diff-fold-cell">~~~ ${entry.count} unchanged combos ~~~</div>` +
+            `</div>`;
+        } else {
+          html += ComboRenderer.renderDiffRow(entry);
+        }
+      }
+
+      els.diffBody.innerHTML = html;
+    }
+
+    const realEntryCount = filteredEntries.filter(e => e.diffStatus !== 'fold').length;
+    els.resultCount.textContent = `${realEntryCount} combos`;
+    els.pageInfo.textContent = `Page ${state.page} / ${totalPages}`;
+    els.prevPage.disabled = state.page <= 1;
+    els.nextPage.disabled = state.page >= totalPages;
+  }
+
+  function setupPagination() {
+    els.prevPage.addEventListener('click', () => {
+      if (state.page > 1) {
+        state.page--;
+        renderList();
+        els.diffSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+    els.nextPage.addEventListener('click', () => {
+      const totalPages = Math.ceil(state.filteredEntries.length / state.pageSize);
+      if (state.page < totalPages) {
+        state.page++;
+        renderList();
+        els.diffSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  }
+
+  function showUI() {
+    els.summaryBar.classList.add('visible');
+    els.filterBar.classList.add('visible');
+    els.diffSection.classList.add('visible');
+    els.emptyState.style.display = 'none';
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  return { state };
+})();
+</script>
+
+</body>
+</html>
