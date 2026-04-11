@@ -450,6 +450,12 @@ body {
 .band-sep { color: var(--text-muted); opacity: 0.4; }
 .mimo-sep { color: var(--text-muted); opacity: 0.4; }
 
+/* UL group: wraps as a unit so the UL label always starts the new line */
+.ul-group {
+  display: inline-block;
+  white-space: nowrap;
+}
+
 /* Fixed-width segments for column alignment */
 .seg {
   display: inline-block;
@@ -1418,7 +1424,7 @@ const ComboRenderer = (() => {
         ulSegs.push(seg('endc-ul-nr', combo.nrUL.map(b => bandTextWithBW(b, true)).join(plus)));
       }
       if (ulSegs.length) {
-        html += `&nbsp; <span class="row-label">UL</span> ${ulSegs.join(PIPE)}`;
+        html += `&nbsp; <span class="ul-group"><span class="row-label">UL</span> ${ulSegs.join(PIPE)}</span>`;
       }
       return html;
 
@@ -1444,7 +1450,7 @@ const ComboRenderer = (() => {
         if (ulMimos.some(m => m && m !== '-')) {
           ulSegs.push(seg('nrca-ul-mimo', ulMimos.join('+')));
         }
-        html += `&nbsp; <span class="row-label">UL</span> ${ulSegs.join(PIPE)}`;
+        html += `&nbsp; <span class="ul-group"><span class="row-label">UL</span> ${ulSegs.join(PIPE)}</span>`;
       }
       return html;
     }
@@ -1544,7 +1550,7 @@ const ComboRenderer = (() => {
         ).join(plus)));
       }
       if (ulSegs.length) {
-        html += `&nbsp; <span class="row-label">UL</span> ${ulSegs.join(PIPE)}`;
+        html += `&nbsp; <span class="ul-group"><span class="row-label">UL</span> ${ulSegs.join(PIPE)}</span>`;
       }
       return html;
 
@@ -1592,7 +1598,7 @@ const ComboRenderer = (() => {
         if (combo.nrUL.some(b => b.mimo && b.mimo !== '-')) {
           ulSegs.push(seg('nrca-ul-mimo', ulMimos.join('+')));
         }
-        html += `&nbsp; <span class="row-label">UL</span> ${ulSegs.join(PIPE)}`;
+        html += `&nbsp; <span class="ul-group"><span class="row-label">UL</span> ${ulSegs.join(PIPE)}</span>`;
       }
       return html;
     }
