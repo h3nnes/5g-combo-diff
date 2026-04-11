@@ -760,6 +760,16 @@ body {
         <button class="toggle-btn" data-status="unchanged">=</button>
       </div>
     </div>
+    <div class="filter-group">
+      <span class="filter-label">Per page:</span>
+      <div class="toggle-group" id="pageSizeToggle">
+        <button class="toggle-btn" data-pagesize="50">50</button>
+        <button class="toggle-btn active" data-pagesize="100">100</button>
+        <button class="toggle-btn" data-pagesize="200">200</button>
+        <button class="toggle-btn" data-pagesize="500">500</button>
+        <button class="toggle-btn" data-pagesize="all">All</button>
+      </div>
+    </div>
     <input type="text" class="search-input" id="searchInput" placeholder="Search combo name, or band set: n78a+3c+1a">
     <span class="result-count" id="resultCount"></span>
   </div>
@@ -1778,7 +1788,7 @@ const AppController = (() => {
     statusFilter: 'all',
     searchQuery: '',
     page: 1,
-    pageSize: 80,
+    pageSize: 100,
   };
 
   const els = {};
@@ -1800,6 +1810,7 @@ const AppController = (() => {
     els.pageInfo = document.getElementById('pageInfo');
     els.prevPage = document.getElementById('prevPage');
     els.nextPage = document.getElementById('nextPage');
+    els.pagination = document.getElementById('pagination');
 
     setupDropZone(els.dropOld, 'old');
     setupDropZone(els.dropNew, 'new');
@@ -2034,6 +2045,17 @@ const AppController = (() => {
       });
     });
 
+    document.querySelectorAll('#pageSizeToggle .toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#pageSizeToggle .toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const val = btn.dataset.pagesize;
+        state.pageSize = val === 'all' ? Infinity : parseInt(val, 10);
+        state.page = 1;
+        renderList();
+      });
+    });
+
     let searchTimeout = null;
     els.searchInput.addEventListener('input', () => {
       clearTimeout(searchTimeout);
@@ -2171,8 +2193,8 @@ const AppController = (() => {
     if (state.page > totalPages) state.page = totalPages;
     if (state.page < 1) state.page = 1;
 
-    const start = (state.page - 1) * pageSize;
-    const end = Math.min(start + pageSize, filteredEntries.length);
+    const start = pageSize === Infinity ? 0 : (state.page - 1) * pageSize;
+    const end = pageSize === Infinity ? filteredEntries.length : Math.min(start + pageSize, filteredEntries.length);
     const pageEntries = filteredEntries.slice(start, end);
 
     if (pageEntries.length === 0) {
@@ -2215,6 +2237,8 @@ const AppController = (() => {
     els.pageInfo.textContent = `Page ${state.page} / ${totalPages}`;
     els.prevPage.disabled = state.page <= 1;
     els.nextPage.disabled = state.page >= totalPages;
+    // Hide pagination bar when everything fits on one page
+    els.pagination.style.display = totalPages <= 1 ? 'none' : 'flex';
   }
 
   function setupPagination() {
