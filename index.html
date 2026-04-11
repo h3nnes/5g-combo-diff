@@ -621,6 +621,70 @@ body {
   .filter-group { justify-content: center; }
   .result-count { margin-left: 0; text-align: center; }
   .summary-bar .band-changes { margin-left: 0; }
+
+  /* --- Diff table: vertical stack (old on top, new below) --- */
+  .diff-table-header {
+    grid-template-columns: 1fr;
+  }
+  .diff-table-header .col-header:first-child {
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .diff-row {
+    grid-template-columns: 1fr;
+  }
+  .diff-cell:first-child {
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .diff-row:last-child .diff-cell:first-child {
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .diff-fold {
+    grid-template-columns: 1fr;
+  }
+  .diff-fold-cell:first-child {
+    border-right: none;
+  }
+  /* Hide the duplicate fold cell on mobile */
+  .diff-fold-cell:last-child {
+    display: none;
+  }
+
+  /* Reduce font sizes for combo content */
+  .diff-cell {
+    padding: 4px 8px;
+    font-size: 10px;
+    line-height: 1.5;
+    overflow-x: auto;
+  }
+  .row-label {
+    font-size: 9px;
+  }
+  .seg-pipe {
+    width: 1.8ch;
+  }
+
+  /* Tooltip: prevent viewport overflow */
+  .tooltip {
+    left: 0;
+    transform: none;
+    max-width: 90vw;
+    white-space: normal;
+    word-break: break-word;
+  }
+  .tooltip::after {
+    left: 20px;
+    transform: none;
+  }
+
+  /* Reduce empty cell minimum height */
+  .diff-cell.cell-empty {
+    min-height: 16px;
+    padding: 2px 8px;
+  }
 }
 
 /* ==========================================================================
