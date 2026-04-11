@@ -1330,6 +1330,11 @@ const ComboRenderer = (() => {
             return t;
           }).join(' + ');
           track('nrca-ul', s.length);
+          // UL MIMO (expand multi-CC bands)
+          const ulMimos = combo.nrUL.flatMap(b => expandMimo(b, b.mimo || '-'));
+          if (ulMimos.some(m => m && m !== '-')) {
+            track('nrca-ul-mimo', ulMimos.join('+').length);
+          }
         }
       }
     }
@@ -1433,7 +1438,13 @@ const ComboRenderer = (() => {
 
       // UL
       if (combo.nrUL.length) {
-        html += `&nbsp; <span class="row-label">UL</span> ${seg('nrca-ul', combo.nrUL.map(b => bandTextWithBW(b, true)).join(plus))}`;
+        const ulSegs = [];
+        ulSegs.push(seg('nrca-ul', combo.nrUL.map(b => bandTextWithBW(b, true)).join(plus)));
+        const ulMimos = combo.nrUL.flatMap(b => expandMimo(b, b.mimo || '-'));
+        if (ulMimos.some(m => m && m !== '-')) {
+          ulSegs.push(seg('nrca-ul-mimo', ulMimos.join('+')));
+        }
+        html += `&nbsp; <span class="row-label">UL</span> ${ulSegs.join(PIPE)}`;
       }
       return html;
     }
@@ -1568,9 +1579,20 @@ const ComboRenderer = (() => {
 
       if (combo.nrUL.length) {
         const nrULFI = [{ band: 19, bw: 20 }, { band: 23, bw: 24 }];
-        html += `&nbsp; <span class="row-label">UL</span> ${seg('nrca-ul', combo.nrUL.map((b, i) =>
+        const ulMimoIdx = [33, 34];
+        const ulSegs = [];
+        ulSegs.push(seg('nrca-ul', combo.nrUL.map((b, i) =>
           bandTextWithBWHL(b, nrULFI[i]?.band, nrULFI[i]?.bw, true)
-        ).join(plus))}`;
+        ).join(plus)));
+        const ulMimos = combo.nrUL.flatMap((b, i) => {
+          const cc = carrierCount(b.band);
+          const val = b.mimo || '-';
+          return Array(cc).fill(hl(ulMimoIdx[i], val));
+        });
+        if (combo.nrUL.some(b => b.mimo && b.mimo !== '-')) {
+          ulSegs.push(seg('nrca-ul-mimo', ulMimos.join('+')));
+        }
+        html += `&nbsp; <span class="row-label">UL</span> ${ulSegs.join(PIPE)}`;
       }
       return html;
     }
