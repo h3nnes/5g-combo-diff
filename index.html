@@ -417,7 +417,7 @@ body {
 }
 
 .diff-row.row-unchanged:hover .diff-cell {
-  opacity: 0.6;
+  opacity: 0.85;
 }
 
 /* Empty cell (opposite side of added/removed) */
@@ -471,7 +471,8 @@ body {
 
 /* Row hover on non-empty cells */
 .diff-row:hover .diff-cell:not(.cell-empty) {
-  filter: brightness(1.1);
+  filter: brightness(1.35);
+  background-color: var(--bg-hover) !important;
 }
 
 /* ==========================================================================
